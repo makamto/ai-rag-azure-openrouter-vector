@@ -4,9 +4,41 @@ Question-answering over telecom/satellite documents with citations.
 Python · Azure OpenAI (embeddings + chat) · ChromaDB · Docker
 
 ## Architecture
+
+```mermaid
+flowchart LR
+    subgraph Ingestion["Ingestion (ingest.py)"]
+        A[PDF / TXT / MD docs] --> B[Chunk<br/>200 words, 40 overlap]
+        B --> C[Azure OpenAI<br/>Embeddings]
+        C --> D[(ChromaDB<br/>vector store)]
+    end
+    subgraph Query["Query (ask.py)"]
+        Q[User question] --> E[Azure OpenAI<br/>Embeddings]
+        E --> F[Top-k similarity search]
+        D --> F
+        F --> G[Prompt: context + question]
+        G --> H[Azure OpenAI<br/>GPT chat]
+        H --> I[Answer + citations]
+    end
 ```
-docs (PDF/TXT/MD) -> chunk (200 words, 40 overlap) -> Azure embeddings -> ChromaDB
-question -> embed -> top-k retrieval -> Azure GPT prompt (context only) -> answer + [file#chunk] citations
+
+## Query Flow
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant App as ask.py / rag.py
+    participant Emb as Azure Embeddings
+    participant DB as ChromaDB
+    participant LLM as Azure GPT
+    U->>App: Question
+    App->>Emb: Embed question
+    Emb-->>App: Query vector
+    App->>DB: Top-k nearest chunks
+    DB-->>App: Chunks + sources
+    App->>LLM: System rules + context + question
+    LLM-->>App: Answer with [file#chunk] citations
+    App-->>U: Answer + sources
 ```
 
 ## Setup
